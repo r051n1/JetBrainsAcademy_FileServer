@@ -20,8 +20,14 @@ public class Server extends Thread {
     }
 
     private static String setUpFileStorage(String fileName) {
-        String filePath = System.getProperty("user.dir") + "/server/data"  + fileName;
-        return filePath;
+        String filePath = System.getProperty("user.dir") + "//File Server//task//src//server//data//";
+        File fileStorage = new File(filePath);
+        if (!fileStorage.exists()) {
+            if (fileStorage.mkdir()) {
+                System.out.println("Created storage folder");
+            }
+        }
+        return filePath + fileName;
     }
 
     public String processCommand(ArrayList<String> commandToken) {
@@ -32,18 +38,16 @@ public class Server extends Thread {
 
                 File putFile = new File(setUpFileStorage(commandToken.get(1)));
 
-                try (FileWriter writer = new FileWriter(putFile)) {
-
-                    if (!putFile.exists()) {
-                        writer.write(commandToken.get(2));
-                        writer.close();
-                        return String.valueOf(200);
+                    if (!putFile.exists() && !putFile.isDirectory()) {
+                        try {
+                            Files.write(putFile.toPath(), commandToken.get(2).getBytes());
+                            return String.valueOf(200);
+                        } catch (IOException e) {
+                            return String.valueOf(403);
+                        }
                     } else {
                         return String.valueOf(403);
                     }
-                } catch (IOException e) {
-                    return String.valueOf(403);
-                }
 
             case "GET":
 
