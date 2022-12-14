@@ -38,27 +38,27 @@ public class Server extends Thread {
 
                 File putFile = new File(setUpFileStorage(commandToken.get(1)));
 
-                    if (!putFile.exists() && !putFile.isDirectory()) {
-                        try {
-                            Files.write(putFile.toPath(), commandToken.get(2).getBytes());
-                            return String.valueOf(200);
-                        } catch (IOException e) {
-                            return String.valueOf(403);
-                        }
-                    } else {
+                if (!putFile.exists() && !putFile.isDirectory()) {
+                    try {
+                        Files.write(putFile.toPath(), commandToken.get(2).getBytes());
+                        return String.valueOf(200);
+                    } catch (IOException e) {
                         return String.valueOf(403);
                     }
+                } else {
+                    return String.valueOf(403);
+                }
 
             case "GET":
 
-                File getFile = new File(commandToken.get(0));
+                File getFile = new File(setUpFileStorage(commandToken.get(1)));
                 String fileContent;
 
                 try (Scanner reader = new Scanner(getFile)) {
                     if (getFile.exists() && !getFile.isDirectory()) {
                         fileContent = reader.nextLine();
                         reader.close();
-                        return 200 + fileContent;
+                        return 200 + " " + fileContent;
                     } else {
                         return String.valueOf(403);
                     }
@@ -68,7 +68,7 @@ public class Server extends Thread {
 
             case "DELETE":
 
-                File deleteFile = new File(commandToken.get(0));
+                File deleteFile = new File(setUpFileStorage(commandToken.get(1)));
 
                 try {
                     if (Files.deleteIfExists(deleteFile.toPath())) {
