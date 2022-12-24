@@ -2,20 +2,51 @@ package client;
 
 import java.io.*;
 import java.net.Socket;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Scanner;
 
 public class Client extends Thread {
     private final String ADDRESS = "127.0.0.1";
     private final int PORT = 23456;
-    private ArrayList<String> commandToken = new ArrayList<>();
+    private String lastRequestType = "";
 
-    private void clientMenu() {
+    private void setUpClientStorage() {
+        String storagePath = System.getProperty("user.dir") + "//File Server//task//src//client//data//";
+        File storage = new File(storagePath);
 
+        if (!storage.exists()) {
+            if (storage.mkdir()) {
+                System.out.println("Created client storage folder");
+            }
+        }
+    }
+
+    private byte[] getFileContent(String fileName) throws FileNotFoundException {
+
+        File userFile = new File(System.getProperty("user.dir") + "//File Server//task//src//client//data//"
+                + fileName);
+        byte[] fileContent;
+
+        if (userFile.exists() && !userFile.isDirectory()) {
+            try {
+                fileContent = Files.readAllBytes(userFile.toPath());
+                return fileContent;
+            } catch (IOException e) {
+                System.out.println("Failed finding file to be saved on server");
+                e.printStackTrace();
+                throw new FileNotFoundException();
+            }
+        } else {
+            throw new FileNotFoundException();
+        }
+     }
+
+    private boolean sendRequest(ObjectOutputStream output) throws IOException {
+
+        ArrayList<String> commandToken = new ArrayList<>();
         Scanner input = new Scanner(System.in);
         String choiceOrId;
-        String fileName;
-        String fileContent;
 
         System.out.println("Enter action (1 - get a file, 2 - create a file, 3 - delete a file): ");
 
@@ -24,68 +55,137 @@ public class Client extends Thread {
         switch (choiceOrId) {
 
             case "1":
+
                 choiceOrId = "GET";
-                System.out.println("Enter filename: ");
-                fileName = input.nextLine();
+                lastRequestType = choiceOrId;
                 commandToken.add(choiceOrId);
-                commandToken.add(fileName);
-                break;
+                System.out.println("Do you want to get the file by name or by id (1 - name, 2 - id): ");
+                choiceOrId = input.nextLine();
+
+                if (choiceOrId.equals("1")) {
+                    choiceOrId = "BY_NAME";
+                    commandToken.add(choiceOrId);
+                    System.out.println("Enter filename: ");
+                    choiceOrId = input.nextLine();
+                    commandToken.add(choiceOrId);
+                    output.writeObject(commandToken);
+                    return true;
+
+                } else if (choiceOrId.equals("2")) {
+                    choiceOrId = "BY_ID";
+                    commandToken.add(choiceOrId);
+                    System.out.println("Enter file id: ");
+                    choiceOrId = input.nextLine();
+                    commandToken.add(choiceOrId);
+                    output.writeObject(commandToken);
+                    return true;
+
+                } else {
+                    System.out.println("Invalid choice.");
+                    return false;
+                }
 
             case "2":
+
                 choiceOrId = "PUT";
-                System.out.println("Enter filename: ");
-                fileName = input.nextLine();
-                System.out.println("Enter file content: ");
-                fileContent = input.nextLine();
+                lastRequestType = choiceOrId;
                 commandToken.add(choiceOrId);
-                commandToken.add(fileName);
-                commandToken.add(fileContent);
-                break;
+                System.out.println("Enter filename you want to save on server: ");
+                choiceOrId = input.nextLine();
+
+                try {
+                    byte[] fileContent = getFileContent(choiceOrId);
+                    commandToken.add(String.valueOf(fileContent.length));
+                    System.out.println("Enter filename to be saved on server: ");
+                    choiceOrId = input.nextLine();
+                    commandToken.add(choiceOrId);
+                    output.writeObject(commandToken);
+                    output.write(fileContent);
+                    return true;
+                } catch (FileNotFoundException e) {
+                    e.printStackTrace();
+                    return false;
+                }
 
             case "3":
+
                 choiceOrId = "DELETE";
-                System.out.println("Enter filename: ");
-                fileName = input.nextLine();
+                lastRequestType = choiceOrId;
                 commandToken.add(choiceOrId);
-                commandToken.add(fileName);
-                break;
+                System.out.println("Do you want to delete the file by name or by id (1 - name, 2 - id): ");
+                choiceOrId = input.nextLine();
+
+                if (choiceOrId.equals("1")) {
+                    System.out.println("choice: " + choiceOrId);
+                    choiceOrId = "BY_NAME";
+                    commandToken.add(choiceOrId);
+                    System.out.println("Enter filename: ");
+                    choiceOrId = input.nextLine();
+                    System.out.println("filename: " + choiceOrId);
+                    commandToken.add(choiceOrId);
+                    output.writeObject(commandToken);
+                    return true;
+
+                } else if (choiceOrId.equals("2")) {
+                    choiceOrId = "BY_ID";
+                    commandToken.add(choiceOrId);
+                    System.out.println("Enter file id: ");
+                    choiceOrId = input.nextLine();
+                    commandToken.add(choiceOrId);
+                    output.writeObject(commandToken);
+                    return true;
+
+                } else {
+                    System.out.println("Invalid choice");
+                    return false;
+                }
 
             case "exit":
+
                 choiceOrId = "exit";
                 commandToken.add(choiceOrId);
-                break;
+                output.writeObject(commandToken);
+                return true;
 
             default:
+
                 System.out.println("Invalid choice.");
+                return false;
         }
     }
 
-    private void processResponse(String response) {
+    private void processResponse(DataInputStream input) throws IOException {
 
+        String response;
+        response = input.readUTF();
         String[] responseTokens = response.split(" ");
 
         switch (responseTokens[0]) {
+
             case "200":
-                if (commandToken.get(0).equals("PUT")) {
+
+                if (lastRequestType.equals("PUT")) {
                     System.out.println("The response says that the file was created!");
-                } else if (commandToken.get(0).equals("GET")) {
+                } else if (lastRequestType.equals("GET")) {
                     System.out.println("The content of the file is: " + responseTokens[1]);
-                } else if (commandToken.get(0).equals("DELETE")) {
+                } else if (lastRequestType.equals("DELETE")) {
                     System.out.println("The response says that the file was successfully deleted!");
                 }
                 break;
 
             case "403":
-                if (commandToken.get(0).equals("PUT")) {
+
+                if (lastRequestType.equals("PUT")) {
                     System.out.println("The response says that creating the file was forbidden!");
-                } else if (commandToken.get(0).equals("GET")) {
+                } else if (lastRequestType.equals("GET")) {
                     System.out.println("The response says that retrieving the file was forbidden!");
-                } else if (commandToken.get(0).equals("DELETE")) {
+                } else if (lastRequestType.equals("DELETE")) {
                     System.out.println("The response says that deleting the file was forbidden!");
                 }
                 break;
 
             case "404":
+
                 System.out.println("The response says that the file was not found!");
                 break;
         }
@@ -94,22 +194,21 @@ public class Client extends Thread {
     @Override
     public void run() {
 
+        setUpClientStorage();
+
         try (
                 Socket socket = new Socket(ADDRESS, PORT);
                 DataInputStream input = new DataInputStream(socket.getInputStream());
                 ObjectOutputStream output = new ObjectOutputStream(socket.getOutputStream());
         ) {
 
-            clientMenu();
-
-            if (!commandToken.isEmpty()) {
-                output.writeObject(commandToken);
-                String response = input.readUTF();
-                processResponse(response);
+            if (sendRequest(output)) {
+                processResponse(input);
             }
 
         } catch (IOException e) {
-            System.out.println("Server not responding.");
+            e.printStackTrace();
+            System.out.println("Failed to send a request to the server or the server is offline.");
         }
     }
 }
