@@ -1,9 +1,11 @@
 package server;
 
+import javax.xml.crypto.Data;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
 
 public class Server extends Thread {
@@ -12,7 +14,7 @@ public class Server extends Thread {
     private boolean serverOnline;
     private HashMap<String, Integer> idMap;
 
-    private void stop(ObjectInputStream input, ObjectOutputStream output, Socket socket) throws IOException {
+    private void stop(ObjectInputStream input, DataOutputStream output, Socket socket) throws IOException {
         saveIdMap(idMap);
         input.close();
         output.close();
@@ -34,7 +36,7 @@ public class Server extends Thread {
     }
 
     private void saveIdMap(HashMap<String, Integer> idMap) throws IOException {
-        String mapPath = System.getProperty("user.dir") + "//File Server//task//src//server//ID map";
+        String mapPath = System.getProperty("user.dir") + "//File Server//task//src//server//ID map//";
         File mapStorage = new File(mapPath);
 
         if (!mapStorage.exists()) {
@@ -57,7 +59,7 @@ public class Server extends Thread {
         File idMapFile = new File(mapPath);
 
         if (idMapFile.exists() && !idMapFile.isDirectory()) {
-           HashMap<String, Integer> idMap;
+            HashMap<String, Integer> idMap;
 
             FileInputStream fis = new FileInputStream(idMapFile);
             BufferedInputStream bis = new BufferedInputStream(fis);
@@ -182,7 +184,7 @@ public class Server extends Thread {
         }
     }
 
-    public String processCommand(ObjectInputStream input)
+    public boolean processCommand(ObjectInputStream input, DataOutputStream output)
             throws IOException, ClassNotFoundException {
 
         ArrayList<String> commandToken;
@@ -191,19 +193,24 @@ public class Server extends Thread {
         switch (commandToken.get(0)) {
 
             case "exit":
-                return commandToken.get(0);
+                return false;
 
             case "PUT":
                 try {
                     if (saveFile(input, commandToken)) {
-                        String id = String.valueOf(idMap.get(commandToken.get(2)));
-                        return 200 + " " + id;
+                        int id = idMap.get(commandToken.get(2));
+                        output.writeUTF("200 ");
+                        output.writeInt(id);
+                        output.flush();
+                        return true;
                     } else {
-                        return String.valueOf(403);
+                        output.writeUTF("403");
+                        return true;
                     }
                 } catch (FileNotFoundException e) {
                     e.printStackTrace();
-                    return String.valueOf(403);
+                    output.writeUTF("403");
+                    return true;
                 }
 
             case "GET":
@@ -211,26 +218,37 @@ public class Server extends Thread {
 
                 try {
                     fileContent = getFile(commandToken.get(1), commandToken.get(2));
-                    return 200 + ":" + Arrays.toString(fileContent);
+                    output.writeUTF("200");
+                    output.writeInt(fileContent.length);
+                    output.write(fileContent);
+                    output.flush();
+                    return true;
                 } catch (FileNotFoundException e) {
-                    return String.valueOf(404);
+                    e.printStackTrace();
+                    output.writeUTF("404");
+                    return true;
                 }
 
             case "DELETE":
                 try {
                     if (deleteFile(commandToken.get(1), commandToken.get(2))) {
-                        return String.valueOf(200);
+                        output.writeUTF("200");
+                        return true;
                     } else {
-                        return String.valueOf(403);
+                        output.writeUTF("403");
+                        return true;
                     }
                 } catch (FileNotFoundException e) {
-                    return String.valueOf(403);
+                    e.printStackTrace();
+                    output.writeUTF("403");
+                    return true;
                 }
 
             default:
 
                 System.out.println("System invalid command.");
-                return String.valueOf(400);
+                output.writeUTF("400");
+                return true;
         }
     }
 
@@ -254,13 +272,12 @@ public class Server extends Thread {
                 try (
                         Socket socket = server.accept();
                         ObjectInputStream input = new ObjectInputStream(socket.getInputStream());
-                        ObjectOutputStream output = new ObjectOutputStream(socket.getOutputStream());
+                        DataOutputStream output = new DataOutputStream(socket.getOutputStream());
                 ) {
 
                     try {
-                        String response = processCommand(input);
-                        if (!response.equals("exit")) {
-                            output.writeUTF(response);
+                        if (processCommand(input, output)) {
+                            System.out.println("Response sent");
                         } else {
                             stop(input, output, socket);
                         }
