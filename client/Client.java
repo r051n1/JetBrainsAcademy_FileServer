@@ -3,6 +3,7 @@ package client;
 import java.io.*;
 import java.net.Socket;
 import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Scanner;
 
@@ -40,7 +41,24 @@ public class Client extends Thread {
         } else {
             throw new FileNotFoundException();
         }
-     }
+    }
+
+    private void saveFile(DataInputStream input)  throws IOException {
+        String filePath = System.getProperty("user.dir")
+                + "//File Server//task//src//client//data//";
+
+        int size = input.readInt();
+        byte[] fileContent = new byte[size];
+        input.readFully(fileContent, 0, fileContent.length);
+
+        System.out.println("The file was downloaded! Specify a name for it: ");
+        Scanner scanner = new Scanner(System.in);
+        String fileName = scanner.nextLine();
+
+        filePath += fileName;
+        Files.write(Paths.get(filePath), fileContent);
+        System.out.println("File saved on the hard drive!");
+    }
 
     private boolean sendRequest(ObjectOutputStream output) throws IOException {
 
@@ -158,16 +176,22 @@ public class Client extends Thread {
 
         String response;
         response = input.readUTF();
-        String[] responseTokens = response.split(" ");
 
-        switch (responseTokens[0]) {
+        switch (response) {
 
             case "200":
 
                 if (lastRequestType.equals("PUT")) {
-                    System.out.println("The response says that the file was created!");
+                    int id = input.readInt();
+                    System.out.println("Response says the file is saved! ID = " + id);
+
                 } else if (lastRequestType.equals("GET")) {
-                    System.out.println("The content of the file is: " + responseTokens[1]);
+                    try {
+                        saveFile(input);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+
                 } else if (lastRequestType.equals("DELETE")) {
                     System.out.println("The response says that the file was successfully deleted!");
                 }
@@ -199,7 +223,7 @@ public class Client extends Thread {
         try (
                 Socket socket = new Socket(ADDRESS, PORT);
                 DataInputStream input = new DataInputStream(socket.getInputStream());
-                ObjectOutputStream output = new ObjectOutputStream(socket.getOutputStream());
+                ObjectOutputStream output = new ObjectOutputStream(socket.getOutputStream())
         ) {
 
             if (sendRequest(output)) {
