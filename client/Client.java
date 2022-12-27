@@ -66,7 +66,7 @@ public class Client extends Thread {
         Scanner input = new Scanner(System.in);
         String choiceOrId;
 
-        System.out.println("Enter action (1 - get a file, 2 - create a file, 3 - delete a file): ");
+        System.out.println("Enter action (1 - get a file, 2 - save a file, 3 - delete a file): ");
 
         choiceOrId = input.nextLine();
 
@@ -134,12 +134,10 @@ public class Client extends Thread {
                 choiceOrId = input.nextLine();
 
                 if (choiceOrId.equals("1")) {
-                    System.out.println("choice: " + choiceOrId);
                     choiceOrId = "BY_NAME";
                     commandToken.add(choiceOrId);
                     System.out.println("Enter filename: ");
                     choiceOrId = input.nextLine();
-                    System.out.println("filename: " + choiceOrId);
                     commandToken.add(choiceOrId);
                     output.writeObject(commandToken);
                     return true;
@@ -174,12 +172,12 @@ public class Client extends Thread {
 
     private void processResponse(DataInputStream input) throws IOException {
 
-        String response;
-        response = input.readUTF();
+        int response;
+        response = input.readInt();
 
         switch (response) {
 
-            case "200":
+            case 200:
 
                 if (lastRequestType.equals("PUT")) {
                     int id = input.readInt();
@@ -193,22 +191,22 @@ public class Client extends Thread {
                     }
 
                 } else if (lastRequestType.equals("DELETE")) {
-                    System.out.println("The response says that the file was successfully deleted!");
+                    System.out.println("The response says that this file was deleted successfully!");
                 }
                 break;
 
-            case "403":
+            case 403:
 
                 if (lastRequestType.equals("PUT")) {
                     System.out.println("The response says that creating the file was forbidden!");
                 } else if (lastRequestType.equals("GET")) {
                     System.out.println("The response says that retrieving the file was forbidden!");
                 } else if (lastRequestType.equals("DELETE")) {
-                    System.out.println("The response says that deleting the file was forbidden!");
+                    System.out.println("The response says that this file is not found!");
                 }
                 break;
 
-            case "404":
+            case 404:
 
                 System.out.println("The response says that the file was not found!");
                 break;
@@ -227,6 +225,7 @@ public class Client extends Thread {
         ) {
 
             if (sendRequest(output)) {
+                System.out.println("The request was sent.");
                 processResponse(input);
             }
 
