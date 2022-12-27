@@ -1,15 +1,12 @@
 package server;
 
-import javax.xml.crypto.Data;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.*;
 
 public class Server extends Thread {
-    private final String ADDRESS = "127.0.0.1";
     private final int PORT = 23456;
     private boolean serverOnline;
     private HashMap<String, Integer> idMap;
@@ -51,6 +48,8 @@ public class Server extends Thread {
             BufferedOutputStream bos = new BufferedOutputStream(fos);
             ObjectOutputStream oos = new ObjectOutputStream(bos);
             oos.writeObject(idMap);
+            oos.close();
+            fos.close();
         }
     }
 
@@ -59,22 +58,36 @@ public class Server extends Thread {
         File idMapFile = new File(mapPath);
 
         if (idMapFile.exists() && !idMapFile.isDirectory()) {
-            HashMap<String, Integer> idMap;
+            HashMap<String, Integer> tmpIdMap;
 
             FileInputStream fis = new FileInputStream(idMapFile);
             BufferedInputStream bis = new BufferedInputStream(fis);
             ObjectInputStream ois = new ObjectInputStream(bis);
 
-            idMap = (HashMap<String, Integer>) ois.readObject();
-            return idMap;
+            tmpIdMap = (HashMap<String, Integer>) ois.readObject();
+            ois.close();
+            fis.close();
+
+            return  tmpIdMap;
         } else {
             System.out.println("No id map loaded, creating new id map.");
             return new HashMap<>();
         }
     }
-    private boolean saveFile(ObjectInputStream input, ArrayList<String> commandToken) throws IOException {
+    private int saveFile(ObjectInputStream input, ArrayList<String> commandToken) throws IOException {
 
-        File putFile = new File(setUpFileStorage(commandToken.get(2)));
+        String fileName = commandToken.get(2);
+
+        if (fileName.equals("")) {
+            int i = 1;
+            fileName = "newFile" + i;
+            while (idMap.containsKey(fileName)) {
+                i++;
+                fileName = "newFile" + i;
+            }
+        }
+
+        File putFile = new File(setUpFileStorage(fileName));
 
         if (!putFile.exists() && !putFile.isDirectory()) {
             byte[] fileContent = new byte[Integer.parseInt(commandToken.get(1))];
@@ -83,15 +96,15 @@ public class Server extends Thread {
             try {
                 Files.write(putFile.toPath(), fileContent);
                 int fileId = putFile.hashCode();
-                idMap.put(commandToken.get(2), fileId);
-                return true;
+                idMap.put(fileName, fileId);
+                return fileId;
 
             } catch (IOException e) {
                 e.printStackTrace();
-                return false;
+                throw new IOException();
             }
         } else {
-            return false;
+            throw new IOException();
         }
     }
 
@@ -120,9 +133,9 @@ public class Server extends Thread {
 
             case "BY_ID":
 
-                if (idMap.containsKey(nameOrId)) {
+                if (idMap.containsValue(Integer.parseInt(nameOrId))) {
                     for (var entry : idMap.entrySet()) {
-                        if (entry.getValue().equals(nameOrId)) {
+                        if (entry.getValue().equals(Integer.parseInt(nameOrId))) {
                             String fileName = entry.getKey();
                             userFile = new File(setUpFileStorage(fileName));
                             if (userFile.exists() && !userFile.isDirectory()) {
@@ -162,9 +175,9 @@ public class Server extends Thread {
                 }
 
             case "BY_ID":
-                if (idMap.containsKey(nameOrId)) {
-                    for (var entry: idMap.entrySet()) {
-                        if (entry.getValue().equals(nameOrId)) {
+                if (idMap.containsValue(Integer.parseInt(nameOrId))) {
+                    for (var entry : idMap.entrySet()) {
+                        if (entry.getValue().equals(Integer.parseInt(nameOrId))) {
                             String fileName = entry.getKey();
                             userFile = new File(setUpFileStorage(fileName));
                             try {
@@ -197,19 +210,14 @@ public class Server extends Thread {
 
             case "PUT":
                 try {
-                    if (saveFile(input, commandToken)) {
-                        int id = idMap.get(commandToken.get(2));
-                        output.writeUTF("200 ");
-                        output.writeInt(id);
-                        output.flush();
-                        return true;
-                    } else {
-                        output.writeUTF("403");
-                        return true;
-                    }
-                } catch (FileNotFoundException e) {
+                    int id = saveFile(input, commandToken);
+                    output.writeInt(200);
+                    output.writeInt(id);
+                    output.flush();
+                    return true;
+                } catch (IOException e) {
                     e.printStackTrace();
-                    output.writeUTF("403");
+                    output.writeInt(403);
                     return true;
                 }
 
@@ -218,36 +226,37 @@ public class Server extends Thread {
 
                 try {
                     fileContent = getFile(commandToken.get(1), commandToken.get(2));
-                    output.writeUTF("200");
+                    output.writeInt(200);
                     output.writeInt(fileContent.length);
                     output.write(fileContent);
                     output.flush();
                     return true;
                 } catch (FileNotFoundException e) {
                     e.printStackTrace();
-                    output.writeUTF("404");
+                    output.writeInt(404);
                     return true;
                 }
 
             case "DELETE":
                 try {
                     if (deleteFile(commandToken.get(1), commandToken.get(2))) {
-                        output.writeUTF("200");
+                        idMap.remove(commandToken.get(2));
+                        output.writeInt(200);
                         return true;
                     } else {
-                        output.writeUTF("403");
+                        output.writeInt(403);
                         return true;
                     }
                 } catch (FileNotFoundException e) {
                     e.printStackTrace();
-                    output.writeUTF("403");
+                    output.writeInt(403);
                     return true;
                 }
 
             default:
 
                 System.out.println("System invalid command.");
-                output.writeUTF("400");
+                output.writeInt(400);
                 return true;
         }
     }
@@ -276,9 +285,7 @@ public class Server extends Thread {
                 ) {
 
                     try {
-                        if (processCommand(input, output)) {
-                            System.out.println("Response sent");
-                        } else {
+                        if (!processCommand(input, output)) {
                             stop(input, output, socket);
                         }
 
