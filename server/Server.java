@@ -37,7 +37,7 @@ public class Server extends Thread {
     }
 
     private void saveIdMap(HashMap<String, Integer> idMap) throws IOException {
-        String mapPath = System.getProperty("user.dir") + "//File Server//task//src//server//ID map//";
+        String mapPath = System.getProperty("user.dir") + "//src//server//ID map//";
         File mapStorage = new File(mapPath);
 
         if (!mapStorage.exists()) {
@@ -58,7 +58,7 @@ public class Server extends Thread {
     }
 
     private HashMap<String, Integer> readIdMap() throws IOException, ClassNotFoundException {
-        String mapPath = System.getProperty("user.dir") + "//File Server//task//src//server//ID map//map.bin";
+        String mapPath = System.getProperty("user.dir") + "//src//server//ID map//map.bin";
         File idMapFile = new File(mapPath);
 
         if (idMapFile.exists() && !idMapFile.isDirectory()) {
