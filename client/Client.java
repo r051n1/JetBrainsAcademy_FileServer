@@ -7,13 +7,13 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Scanner;
 
-public class Client extends Thread {
+public class Client {
     private final String ADDRESS = "127.0.0.1";
     private final int PORT = 23456;
     private String lastRequestType = "";
 
     private void setUpClientStorage() {
-        String storagePath = System.getProperty("user.dir") + "//File Server//task//src//client//data//";
+        String storagePath = System.getProperty("user.dir") + "//src//client//data//";
         File storage = new File(storagePath);
 
         if (!storage.exists()) {
@@ -25,7 +25,7 @@ public class Client extends Thread {
 
     private byte[] getFileContent(String fileName) throws FileNotFoundException {
 
-        File userFile = new File(System.getProperty("user.dir") + "//File Server//task//src//client//data//"
+        File userFile = new File(System.getProperty("user.dir") + "//src//client//data//"
                 + fileName);
         byte[] fileContent;
 
@@ -45,7 +45,7 @@ public class Client extends Thread {
 
     private void saveFile(DataInputStream input)  throws IOException {
         String filePath = System.getProperty("user.dir")
-                + "//File Server//task//src//client//data//";
+                + "//src//client//data//";
 
         int size = input.readInt();
         byte[] fileContent = new byte[size];
@@ -181,7 +181,7 @@ public class Client extends Thread {
 
                 if (lastRequestType.equals("PUT")) {
                     int id = input.readInt();
-                    System.out.println("Response says the file is saved! ID = " + id);
+                    System.out.println("Response says that file is saved! ID = " + id);
 
                 } else if (lastRequestType.equals("GET")) {
                     try {
@@ -213,20 +213,20 @@ public class Client extends Thread {
         }
     }
 
-    @Override
-    public void run() {
+    public static void main(String[] args) {
+        Client client = new Client();
 
-        setUpClientStorage();
+        client.setUpClientStorage();
 
         try (
-                Socket socket = new Socket(ADDRESS, PORT);
+                Socket socket = new Socket(client.ADDRESS, client.PORT);
                 DataInputStream input = new DataInputStream(socket.getInputStream());
                 ObjectOutputStream output = new ObjectOutputStream(socket.getOutputStream())
         ) {
 
-            if (sendRequest(output)) {
+            if (client.sendRequest(output)) {
                 System.out.println("The request was sent.");
-                processResponse(input);
+                client.processResponse(input);
             }
 
         } catch (IOException e) {
