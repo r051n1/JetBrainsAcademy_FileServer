@@ -4,7 +4,10 @@ import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class Server extends Thread {
     private final int PORT = 23456;
@@ -21,7 +24,7 @@ public class Server extends Thread {
 
     private String setUpFileStorage(String fileName) {
 
-        String filePath = System.getProperty("user.dir") + "//File Server//task//src//server//data//";
+        String filePath = System.getProperty("user.dir") + "//src//server//data//";
         File fileStorage = new File(filePath);
 
         if (!fileStorage.exists()) {
@@ -29,6 +32,7 @@ public class Server extends Thread {
                 System.out.println("Created server storage folder");
             }
         }
+
         return filePath + fileName;
     }
 
@@ -74,32 +78,38 @@ public class Server extends Thread {
             return new HashMap<>();
         }
     }
-    private int saveFile(ObjectInputStream input, ArrayList<String> commandToken) throws IOException {
+
+    private String getFileName(ArrayList<String> commandToken) {
 
         String fileName = commandToken.get(2);
 
-        if (fileName.equals("")) {
+        if (fileName.isEmpty()) {
             int i = 1;
-            fileName = "newFile" + i;
+            fileName = "newFile" + i + ".dat";
             while (idMap.containsKey(fileName)) {
                 i++;
-                fileName = "newFile" + i;
+                fileName = "newFile" + i + ".dat";
             }
+            return fileName;
+        } else {
+            return fileName;
         }
+    }
+
+    private void saveFile(ObjectInputStream input, ArrayList<String> commandToken, String fileName) throws IOException {
 
         File putFile = new File(setUpFileStorage(fileName));
 
-        if (!putFile.exists() && !putFile.isDirectory()) {
-            byte[] fileContent = new byte[Integer.parseInt(commandToken.get(1))];
-            input.readFully(fileContent, 0, Integer.parseInt(commandToken.get(1)));
 
+        if (!putFile.exists() && !putFile.isDirectory()) {
+
+            byte[] fileContent = new byte[Integer.parseInt(commandToken.get(1))];
+            input.readFully(fileContent, 0, fileContent.length);
             try {
                 Files.write(putFile.toPath(), fileContent);
-                int fileId = putFile.hashCode();
+                int fileId = Math.abs(fileName.hashCode());
                 idMap.put(fileName, fileId);
-                return fileId;
-
-            } catch (IOException e) {
+            } catch (NoSuchFileException e) {
                 e.printStackTrace();
                 throw new IOException();
             }
@@ -209,17 +219,20 @@ public class Server extends Thread {
                 return false;
 
             case "PUT":
-                try {
-                    int id = saveFile(input, commandToken);
-                    output.writeInt(200);
-                    output.writeInt(id);
-                    output.flush();
-                    return true;
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    output.writeInt(403);
-                    return true;
-                }
+                String fileName = getFileName(commandToken);
+                ExecutorService executor = Executors.newSingleThreadExecutor();
+                executor.submit(() -> {
+                    try {
+                        saveFile(input, commandToken, fileName);
+                        output.writeInt(200);
+                        output.writeInt(Math.abs(fileName.hashCode()));
+                        output.flush();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                });
+                executor.shutdown();
+                return true;
 
             case "GET":
                 byte[] fileContent;
@@ -288,7 +301,6 @@ public class Server extends Thread {
                         if (!processCommand(input, output)) {
                             stop(input, output, socket);
                         }
-
                     } catch (EOFException | ClassNotFoundException e) {
                         e.printStackTrace();
                     }
