@@ -87,6 +87,7 @@ public class Client {
                     choiceOrId = input.nextLine();
                     commandToken.add(choiceOrId);
                     output.writeObject(commandToken);
+                    output.flush();
                     return true;
 
                 } else if (choiceOrId.equals("2")) {
@@ -96,6 +97,7 @@ public class Client {
                     choiceOrId = input.nextLine();
                     commandToken.add(choiceOrId);
                     output.writeObject(commandToken);
+                    output.flush();
                     return true;
 
                 } else {
@@ -113,12 +115,14 @@ public class Client {
 
                 try {
                     byte[] fileContent = getFileContent(choiceOrId);
-                    commandToken.add(String.valueOf(fileContent.length));
+                    int size = fileContent.length;
                     System.out.println("Enter filename to be saved on server: ");
                     choiceOrId = input.nextLine();
                     commandToken.add(choiceOrId);
                     output.writeObject(commandToken);
+                    output.writeInt(size);
                     output.write(fileContent);
+                    output.flush();
                     return true;
                 } catch (FileNotFoundException e) {
                     e.printStackTrace();
@@ -140,6 +144,7 @@ public class Client {
                     choiceOrId = input.nextLine();
                     commandToken.add(choiceOrId);
                     output.writeObject(commandToken);
+                    output.flush();
                     return true;
 
                 } else if (choiceOrId.equals("2")) {
@@ -149,6 +154,7 @@ public class Client {
                     choiceOrId = input.nextLine();
                     commandToken.add(choiceOrId);
                     output.writeObject(commandToken);
+                    output.flush();
                     return true;
 
                 } else {
@@ -208,7 +214,7 @@ public class Client {
 
             case 404:
 
-                System.out.println("The response says that the file was not found!");
+                System.out.println("The response says that this file is not found!");
                 break;
         }
     }
