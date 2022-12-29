@@ -81,7 +81,7 @@ public class Server extends Thread {
 
     private String getFileName(ArrayList<String> commandToken) {
 
-        String fileName = commandToken.get(2);
+        String fileName = commandToken.get(1);
 
         if (fileName.isEmpty()) {
             int i = 1;
@@ -96,15 +96,11 @@ public class Server extends Thread {
         }
     }
 
-    private void saveFile(ObjectInputStream input, ArrayList<String> commandToken, String fileName) throws IOException {
+    private void saveFile(byte[] fileContent, String fileName) throws IOException {
 
         File putFile = new File(setUpFileStorage(fileName));
 
-
         if (!putFile.exists() && !putFile.isDirectory()) {
-
-            byte[] fileContent = new byte[Integer.parseInt(commandToken.get(1))];
-            input.readFully(fileContent, 0, fileContent.length);
             try {
                 Files.write(putFile.toPath(), fileContent);
                 int fileId = Math.abs(fileName.hashCode());
@@ -142,6 +138,12 @@ public class Server extends Thread {
                 }
 
             case "BY_ID":
+
+                try {
+                    Integer.parseInt(nameOrId);
+                } catch (NumberFormatException e) {
+                    throw new FileNotFoundException();
+                }
 
                 if (idMap.containsValue(Integer.parseInt(nameOrId))) {
                     for (var entry : idMap.entrySet()) {
@@ -221,17 +223,22 @@ public class Server extends Thread {
             case "PUT":
                 String fileName = getFileName(commandToken);
                 ExecutorService executor = Executors.newSingleThreadExecutor();
+                int size = input.readInt();
+                byte[] userContent = new byte[size];
+                input.readFully(userContent, 0, userContent.length);
+
                 executor.submit(() -> {
                     try {
-                        saveFile(input, commandToken, fileName);
-                        output.writeInt(200);
-                        output.writeInt(Math.abs(fileName.hashCode()));
-                        output.flush();
+                        saveFile(userContent, fileName);
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
                 });
+
                 executor.shutdown();
+                output.writeInt(200);
+                output.writeInt(Math.abs(fileName.hashCode()));
+                output.flush();
                 return true;
 
             case "GET":
@@ -245,7 +252,6 @@ public class Server extends Thread {
                     output.flush();
                     return true;
                 } catch (FileNotFoundException e) {
-                    e.printStackTrace();
                     output.writeInt(404);
                     return true;
                 }
