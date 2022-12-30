@@ -1,2 +1,2 @@
 # JetBrainsAcademy_FileServer
-This repository contains the project of JetBrains Academy called File server, it is a simple server implementation in Java that can process requests from a local client.
+This is a program to simulate client requests and server responses using a simplified version of HTTP protocol. To use this program you first need to start the Main class of package server, this will instantiate a new Server instance, and then the Client class of package server that will automatically connect to the server using a predefined IP address. The client will be able to ask to save a file on the server (this file must be contained in the ./client/data folder which will be generated automatically) and to retrieve or delete a file in the server.
