@@ -13,7 +13,7 @@ public class Client {
     private String lastRequestType = "";
 
     /**
-     * This method creates the user data directory in the specified path if this is not already present.
+     * Creates the user data directory in the specified path if this is not already present.
      */
     private void setUpClientStorage() {
         String storagePath = System.getProperty("user.dir") + "//src//client//data//";
@@ -27,7 +27,7 @@ public class Client {
     }
 
     /**
-     * Retrieve the file that user wants to store on server from users' data directory.
+     * Retrieves the file that user wants to store on server from users' data directory.
      * The file name provided by the user must match with the name of the actual file that user intends to store.
      *
      * @param fileName the name of the file that the user wants to save on server
@@ -55,7 +55,7 @@ public class Client {
     }
 
     /**
-     * This method saves a download file from the server in user data directory.
+     * Saves a download file from the server in user data directory.
      *
      * @param input the input stream to read bytes from server
      * @throws IOException when the communication with the server gets an error
@@ -78,7 +78,7 @@ public class Client {
     }
 
     /**
-     * This method forms a request to be sent to the server.
+     * Forms a request to be sent to the server.
      * It assembles the request putting together different tokens based on user's decisions.
      *
      * @param output the output stream to send the request to the server
@@ -202,7 +202,7 @@ public class Client {
     }
 
     /**
-     * This method process the response received by the server.
+     * Processes the response received by the server.
      * The server sends HTTP response codes and this method interprets the code based on user last request type.
      *
      * @param input input stream to receive the server response
