@@ -14,6 +14,14 @@ public class Server extends Thread {
     private boolean serverOnline;
     private HashMap<String, Integer> idMap;
 
+    /**
+     * Stops the server from running by closing its communication channels.
+     *
+     * @param input the input stream used to receive requests from clients
+     * @param output the output stream used to send responses to clients
+     * @param socket the client socket
+     * @throws IOException if an error occurs while closing the channels
+     */
     private void stop(ObjectInputStream input, DataOutputStream output, Socket socket) throws IOException {
         saveIdMap(idMap);
         input.close();
@@ -22,6 +30,13 @@ public class Server extends Thread {
         serverOnline = false;
     }
 
+    /**
+     * Sets up the correct path for a file to be saved in the server data directory.
+     * If the directory is not already present it creates a new one.
+     *
+     * @param fileName the name of the file for which the path is referring to
+     * @return the correct path to the file
+     */
     private String setUpFileStorage(String fileName) {
 
         String filePath = System.getProperty("user.dir") + "//src//server//data//";
@@ -36,6 +51,13 @@ public class Server extends Thread {
         return filePath + fileName;
     }
 
+    /**
+     * Saves the id map containing files' id in memory for later use.
+     * If the ID map directory does not exist to save the map, this method creates a new one.
+     *
+     * @param idMap the id map that needs to be saved
+     * @throws IOException when an error while saving the map occurs
+     */
     private void saveIdMap(HashMap<String, Integer> idMap) throws IOException {
         String mapPath = System.getProperty("user.dir") + "//src//server//ID map//";
         File mapStorage = new File(mapPath);
@@ -57,6 +79,13 @@ public class Server extends Thread {
         }
     }
 
+    /**
+     * Loads a previous saved map from the ID map directory if present, otherwise it creates a new one for the server.
+     *
+     * @return the loaded id map or the newly created one
+     * @throws IOException when an error occurs while reading the content of the map
+     * @throws ClassNotFoundException if tries to read another class type apart from HashMap
+     */
     private HashMap<String, Integer> readIdMap() throws IOException, ClassNotFoundException {
         String mapPath = System.getProperty("user.dir") + "//src//server//ID map//map.bin";
         File idMapFile = new File(mapPath);
@@ -79,6 +108,13 @@ public class Server extends Thread {
         }
     }
 
+    /**
+     * It retrieves the file name from the request tokens.
+     * If the user did not specify a file name this method forms a new one.
+     *
+     * @param commandToken the request tokens provided by client
+     * @return the file name of the file needed
+     */
     private String getFileName(ArrayList<String> commandToken) {
 
         String fileName = commandToken.get(1);
@@ -96,6 +132,14 @@ public class Server extends Thread {
         }
     }
 
+    /**
+     * Saves a file in the server data directory.
+     * It also creates a new id for the saved file based on the hash of its name, it later adds this in the id hash map.
+     *
+     * @param fileContent byte array of the content of the file that needs to be saved
+     * @param fileName the name of the file that is being saved to form its new id
+     * @throws IOException when an error occurs while saving the file
+     */
     private void saveFile(byte[] fileContent, String fileName) throws IOException {
 
         File putFile = new File(setUpFileStorage(fileName));
@@ -114,6 +158,15 @@ public class Server extends Thread {
         }
     }
 
+    /**
+     * Loads the content of a file stored in the server data directory.
+     * The file can be searched by using its name or its id.
+     *
+     * @param action this string specifies if the client is searching the file by name or by id
+     * @param nameOrId this string contains the name or the id of the file being searched
+     * @return the byte array of the content of the retrieved file
+     * @throws FileNotFoundException when an error occurs while reading the content of the file
+     */
     private byte[] getFile(String action, String nameOrId) throws FileNotFoundException {
 
         byte[] fileContent;
@@ -172,6 +225,15 @@ public class Server extends Thread {
         }
     }
 
+    /**
+     * Delete a file stored in the server data directory.
+     * The specified file can be searched by name or id, and it gets deleted if it exists.
+     *
+     * @param action this string specifies if the client is searching the file by name or id
+     * @param nameOrId this string contains the name or the id of the file being searched
+     * @return true if the file was deleted successfully, false otherwise
+     * @throws FileNotFoundException when an error occurs while searching the file
+     */
     private boolean deleteFile(String action, String nameOrId) throws FileNotFoundException {
         File userFile;
 
@@ -209,6 +271,16 @@ public class Server extends Thread {
         }
     }
 
+    /**
+     * Processes the command provided by the client.
+     * It calls different methods based on the command's tokens.
+     *
+     * @param input the object input stream to receive the request by clients
+     * @param output the output stream to send responses to clients or requested data
+     * @return true if the response was sent correctly, false otherwise
+     * @throws IOException when an error occurs while communicating between client and server
+     * @throws ClassNotFoundException if the input stream cannot read the tokens list provided by the client
+     */
     public boolean processCommand(ObjectInputStream input, DataOutputStream output)
             throws IOException, ClassNotFoundException {
 
